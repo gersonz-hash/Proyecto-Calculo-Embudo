@@ -7,7 +7,6 @@ public class VentanaEmbudo extends JFrame {
 
     private static final Color AZUL_OSCURO = new Color(22, 50, 79);
     private static final Color AZUL_CLARO = new Color(234, 242, 248);
-    private static final Color VERDE = new Color(22, 101, 52);
     private static final Color FONDO = new Color(245, 247, 250);
     private static final Color TEXTO = new Color(45, 55, 72);
 
@@ -18,46 +17,49 @@ public class VentanaEmbudo extends JFrame {
     private final JTextField txtDensidad = new JTextField("7.93");
 
     private final JTextArea resultados = new JTextArea();
+
     private final CalculadoraEmbudo calculadora = new CalculadoraEmbudo();
+    private final GraficaEmbudo grafica = new GraficaEmbudo();
 
     public VentanaEmbudo() {
         setTitle("Calculadora de Embudo - Calculo II");
-        setSize(900, 760);
-        setMinimumSize(new Dimension(750, 650));
+        setSize(950, 780);
+        setMinimumSize(new Dimension(780, 650));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        getContentPane().setBackground(FONDO);
 
         construirInterfaz();
         calcular();
     }
 
     private void construirInterfaz() {
-        setLayout(new BorderLayout(0, 0));
-
-        JPanel encabezado = new JPanel(new BorderLayout());
-        encabezado.setBackground(AZUL_OSCURO);
-        encabezado.setBorder(new EmptyBorder(22, 20, 20, 20));
+        setLayout(new BorderLayout());
 
         JLabel titulo = new JLabel(
                 "CALCULADORA DE EMBUDO",
                 SwingConstants.CENTER);
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 25));
+
+        titulo.setFont(new Font("SansSerif", Font.BOLD, 24));
         titulo.setForeground(Color.WHITE);
+        titulo.setOpaque(true);
+        titulo.setBackground(AZUL_OSCURO);
+        titulo.setBorder(new EmptyBorder(18, 10, 18, 10));
 
-        JLabel subtitulo = new JLabel(
-                "Proyecto de Calculo II | Ingenieria en Sistemas",
-                SwingConstants.CENTER);
-        subtitulo.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        subtitulo.setForeground(new Color(220, 234, 250));
+        add(titulo, BorderLayout.NORTH);
 
-        encabezado.add(titulo, BorderLayout.CENTER);
-        encabezado.add(subtitulo, BorderLayout.SOUTH);
-        add(encabezado, BorderLayout.NORTH);
+        JTabbedPane pestanas = new JTabbedPane();
+        pestanas.setFont(new Font("SansSerif", Font.BOLD, 14));
 
-        JPanel contenido = new JPanel(new BorderLayout(12, 12));
-        contenido.setBackground(FONDO);
-        contenido.setBorder(new EmptyBorder(16, 18, 18, 18));
+        pestanas.addTab("Calculadora", crearPanelCalculadora());
+        pestanas.addTab("Grafica", crearPanelGrafica());
+
+        add(pestanas, BorderLayout.CENTER);
+    }
+
+    private JPanel crearPanelCalculadora() {
+        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        panel.setBackground(FONDO);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         JPanel datos = new JPanel(new GridLayout(0, 2, 12, 12));
         datos.setBackground(Color.WHITE);
@@ -80,7 +82,6 @@ public class VentanaEmbudo extends JFrame {
         btnCalcular.setFocusPainted(false);
         btnCalcular.setOpaque(true);
         btnCalcular.setBorderPainted(false);
-        btnCalcular.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnCalcular.addActionListener(e -> calcular());
 
         JButton btnRestablecer = new JButton("Datos originales");
@@ -88,7 +89,6 @@ public class VentanaEmbudo extends JFrame {
         btnRestablecer.setBackground(AZUL_CLARO);
         btnRestablecer.setForeground(AZUL_OSCURO);
         btnRestablecer.setFocusPainted(false);
-        btnRestablecer.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRestablecer.addActionListener(e -> restablecer());
 
         JPanel botones = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 10));
@@ -96,25 +96,56 @@ public class VentanaEmbudo extends JFrame {
         botones.add(btnCalcular);
         botones.add(btnRestablecer);
 
-        JPanel panelSuperior = new JPanel(new BorderLayout(8, 8));
-        panelSuperior.setBackground(FONDO);
-        panelSuperior.add(datos, BorderLayout.CENTER);
-        panelSuperior.add(botones, BorderLayout.SOUTH);
+        JPanel superior = new JPanel(new BorderLayout(8, 8));
+        superior.setBackground(FONDO);
+        superior.add(datos, BorderLayout.CENTER);
+        superior.add(botones, BorderLayout.SOUTH);
 
         resultados.setEditable(false);
         resultados.setFont(new Font("Monospaced", Font.PLAIN, 13));
         resultados.setForeground(TEXTO);
         resultados.setBackground(Color.WHITE);
         resultados.setMargin(new Insets(14, 14, 14, 14));
-        resultados.setCaretPosition(0);
 
         JScrollPane scroll = new JScrollPane(resultados);
         scroll.setBorder(BorderFactory.createTitledBorder(
                 "Resultados y procedimiento matematico"));
 
-        contenido.add(panelSuperior, BorderLayout.NORTH);
-        contenido.add(scroll, BorderLayout.CENTER);
-        add(contenido, BorderLayout.CENTER);
+        panel.add(superior, BorderLayout.NORTH);
+        panel.add(scroll, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel crearPanelGrafica() {
+        JPanel panel = new JPanel(new BorderLayout(8, 8));
+        panel.setBackground(FONDO);
+        panel.setBorder(new EmptyBorder(12, 12, 12, 12));
+
+        JLabel descripcion = new JLabel(
+                "<html><center>"
+                        + "Perfil longitudinal del embudo<br>"
+                        + "Azul: radio exterior | Verde: radio interior | Gris: acero"
+                        + "</center></html>",
+                SwingConstants.CENTER);
+
+        descripcion.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        descripcion.setForeground(AZUL_OSCURO);
+        descripcion.setBorder(new EmptyBorder(5, 5, 10, 5));
+
+        panel.add(descripcion, BorderLayout.NORTH);
+        panel.add(grafica, BorderLayout.CENTER);
+
+        JLabel nota = new JLabel(
+                "La grafica representa las funciones R(x) y r(x) "
+                        + "en el intervalo de 0 a la altura.",
+                SwingConstants.CENTER);
+
+        nota.setForeground(TEXTO);
+        nota.setBorder(new EmptyBorder(8, 5, 5, 5));
+        panel.add(nota, BorderLayout.SOUTH);
+
+        return panel;
     }
 
     private void agregarCampo(
@@ -154,10 +185,18 @@ public class VentanaEmbudo extends JFrame {
             double densidad = leer(txtDensidad);
 
             String texto = calculadora.calcular(
-                    altura, radioInf, radioSup, espesor, densidad);
+                    altura,
+                    radioInf,
+                    radioSup,
+                    espesor,
+                    densidad);
 
             resultados.setText(texto);
             resultados.setCaretPosition(0);
+
+            // Actualizar la grafica con los datos ingresados
+            grafica.actualizarDatos(
+                    altura, radioInf, radioSup, espesor);
 
         } catch (NumberFormatException ex) {
             mostrarError(
