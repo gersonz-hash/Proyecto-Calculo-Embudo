@@ -1,51 +1,43 @@
-import javax.swing.JPanel;
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+
+import javax.swing.*;
+import java.awt.*;
 import java.awt.geom.Path2D;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
+import java.awt.geom.Line2D;
 
 public class GraficaEmbudo extends JPanel {
 
     private double altura = 12.0;
-    private double radioInf = 0.5;
-    private double radioSup = 5.0;
-    private double espesor = 0.1;
+    private double radioBase = 0.5;
+    private double radioSuperior = 5.0;
+    private double grosor = 0.1;
 
-    private final Color azul = new Color(35, 100, 200);
-    private final Color verde = new Color(30, 150, 90);
-    private final Color acero = new Color(180, 190, 200);
-    private final Color gris = new Color(225, 225, 225);
-
-    private final DecimalFormat formato = new DecimalFormat(
-            "0.00",
-            DecimalFormatSymbols.getInstance(Locale.US)
-    );
+    private final int margenIzquierdo = 85;
+    private final int margenDerecho = 55;
+    private final int margenSuperior = 100;
+    private final int margenInferior = 90;
 
     public GraficaEmbudo() {
+        setPreferredSize(new Dimension(900, 650));
         setBackground(Color.WHITE);
-        setOpaque(true);
     }
 
-    public void actualizarDatos(double altura, double radioInf,
-                                double radioSup, double espesor) {
+    public GraficaEmbudo(double altura, double radioBase,
+                         double radioSuperior, double grosor) {
+        this();
+        actualizarMedidas(altura, radioBase, radioSuperior, grosor);
+    }
 
-        if (altura <= 0 || radioInf <= espesor
-                || radioSup <= espesor || espesor <= 0
-                || radioSup <= 0) {
-            return;
-        }
+    public void actualizarDatos(double altura, double radioBase,
+                                double radioSuperior, double grosor) {
+        actualizarMedidas(altura, radioBase, radioSuperior, grosor);
+    }
 
+    public void actualizarMedidas(double altura, double radioBase,
+                                  double radioSuperior, double grosor) {
         this.altura = altura;
-        this.radioInf = radioInf;
-        this.radioSup = radioSup;
-        this.espesor = espesor;
-
+        this.radioBase = radioBase;
+        this.radioSuperior = radioSuperior;
+        this.grosor = grosor;
         repaint();
     }
 
@@ -54,299 +46,239 @@ public class GraficaEmbudo extends JPanel {
         super.paintComponent(g);
 
         Graphics2D g2 = (Graphics2D) g.create();
-
         g2.setRenderingHint(
                 RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON
         );
 
-        dibujarGrafica(g2);
-
-        g2.dispose();
-    }
-
-    private void dibujarGrafica(Graphics2D g2) {
         int ancho = getWidth();
         int alto = getHeight();
 
-        if (ancho < 250 || alto < 300) {
+        // Título
+        g2.setColor(Color.BLACK);
+        g2.setFont(new Font("Arial", Font.BOLD, 18));
+        String titulo = "Grafica del Embudo respecto al eje X";
+        FontMetrics fmTitulo = g2.getFontMetrics();
+        g2.drawString(
+                titulo,
+                (ancho - fmTitulo.stringWidth(titulo)) / 2,
+                30
+        );
+
+        // Información superior distribuida en dos filas
+        g2.setFont(new Font("Arial", Font.PLAIN, 12));
+        g2.drawString(
+                String.format("Altura: %.2f", altura),
+                margenIzquierdo,
+                55
+        );
+        g2.drawString(
+                String.format("Radio superior: %.2f", radioSuperior),
+                margenIzquierdo + 190,
+                55
+        );
+
+        g2.drawString(
+                String.format("Radio base: %.2f", radioBase),
+                margenIzquierdo,
+                77
+        );
+        g2.drawString(
+                String.format("Grosor: %.2f", grosor),
+                margenIzquierdo + 190,
+                77
+        );
+
+        // Área de dibujo
+        int xInicio = margenIzquierdo;
+        int xFin = ancho - margenDerecho;
+        int yInicio = margenSuperior;
+        int yFin = alto - margenInferior;
+
+        int anchoGrafica = xFin - xInicio;
+        int altoGrafica = yFin - yInicio;
+
+        if (anchoGrafica <= 0 || altoGrafica <= 0) {
+            g2.dispose();
             return;
         }
 
-        int margenIzq = 55;
-        int margenDer = 55;
-        int margenSup = 145;
-        int margenInf = 145;
+        // Escala: altura horizontal y radio vertical
+        double radioMaximo = Math.max(radioSuperior, radioBase);
+        radioMaximo = Math.max(radioMaximo, radioSuperior + grosor);
+        radioMaximo = Math.max(radioMaximo, radioBase + grosor);
 
-        double areaAncho = ancho - margenIzq - margenDer;
-        double areaAlto = alto - margenSup - margenInf;
-
-        if (areaAncho <= 0 || areaAlto <= 0) {
+        if (altura <= 0 || radioMaximo <= 0) {
+            g2.setColor(Color.RED);
+            g2.drawString(
+                    "Ingrese medidas mayores que cero.",
+                    xInicio,
+                    yInicio + 20
+            );
+            g2.dispose();
             return;
         }
 
-        // Una misma escala para ambos ejes.
-        double escalaX = areaAncho / (2.0 * (radioSup + 0.8));
-        double escalaY = areaAlto / altura;
+        double escalaX = anchoGrafica / altura;
+        double escalaY = (altoGrafica * 0.80) / (2.0 * radioMaximo);
+
         double escala = Math.min(escalaX, escalaY);
 
-        int centroX = ancho / 2;
-        int yBase = alto - margenInf;
-        int yTope = (int) Math.round(yBase - altura * escala);
+        // Centrar el embudo dentro del área
+        double largoDibujo = altura * escala;
+        double altoDibujo = 2.0 * radioMaximo * escala;
 
-        int xBaseExtDer =
-                (int) Math.round(centroX + radioInf * escala);
-        int xBaseIntDer =
-                (int) Math.round(centroX + (radioInf - espesor) * escala);
+        double inicioX = xInicio + (anchoGrafica - largoDibujo) / 2.0;
+        double centroY = yInicio + (altoGrafica - altoDibujo) / 2.0
+                + radioMaximo * escala;
 
-        int xTopeExtDer =
-                (int) Math.round(centroX + radioSup * escala);
-        int xTopeIntDer =
-                (int) Math.round(centroX + (radioSup - espesor) * escala);
+        // Cuadrícula
+        g2.setColor(new Color(230, 230, 230));
+        g2.setStroke(new BasicStroke(1));
 
-        int xBaseExtIzq =
-                (int) Math.round(centroX - radioInf * escala);
-        int xBaseIntIzq =
-                (int) Math.round(centroX - (radioInf - espesor) * escala);
+        for (int i = 0; i <= 10; i++) {
+            int x = xInicio + i * anchoGrafica / 10;
+            int y = yInicio + i * altoGrafica / 10;
 
-        int xTopeExtIzq =
-                (int) Math.round(centroX - radioSup * escala);
-        int xTopeIntIzq =
-                (int) Math.round(centroX - (radioSup - espesor) * escala);
-
-        // Cuadrícula y números de los ejes.
-        dibujarCuadricula(g2, centroX, yBase, escala, ancho, alto);
-
-        // Zona de acero del lado izquierdo.
-        Path2D.Double aceroIzquierdo = new Path2D.Double();
-        aceroIzquierdo.moveTo(xBaseExtIzq, yBase);
-        aceroIzquierdo.lineTo(xTopeExtIzq, yTope);
-        aceroIzquierdo.lineTo(xTopeIntIzq, yTope);
-        aceroIzquierdo.lineTo(xBaseIntIzq, yBase);
-        aceroIzquierdo.closePath();
-
-        // Zona de acero del lado derecho.
-        Path2D.Double aceroDerecho = new Path2D.Double();
-        aceroDerecho.moveTo(xBaseExtDer, yBase);
-        aceroDerecho.lineTo(xTopeExtDer, yTope);
-        aceroDerecho.lineTo(xTopeIntDer, yTope);
-        aceroDerecho.lineTo(xBaseIntDer, yBase);
-        aceroDerecho.closePath();
-
-        g2.setColor(acero);
-        g2.fill(aceroIzquierdo);
-        g2.fill(aceroDerecho);
-
-        // Contorno exterior.
-        g2.setColor(azul);
-        g2.setStroke(new BasicStroke(2.5f));
-
-        g2.drawLine(xBaseExtIzq, yBase, xTopeExtIzq, yTope);
-        g2.drawLine(xBaseExtDer, yBase, xTopeExtDer, yTope);
-        g2.drawLine(xTopeExtIzq, yTope, xTopeExtDer, yTope);
-        g2.drawLine(xBaseExtIzq, yBase, xBaseExtDer, yBase);
-
-        // Contorno interior.
-        g2.setColor(verde);
-        g2.setStroke(new BasicStroke(2.5f));
-
-        g2.drawLine(xBaseIntIzq, yBase, xTopeIntIzq, yTope);
-        g2.drawLine(xBaseIntDer, yBase, xTopeIntDer, yTope);
-
-        // Eje central.
-        g2.setColor(Color.GRAY);
-        g2.setStroke(new BasicStroke(1f));
-        g2.drawLine(centroX, 20, centroX, alto - 20);
-
-        // Puntos inferiores.
-        dibujarPunto(g2, xBaseExtDer, yBase, azul);
-        dibujarPunto(g2, xBaseIntDer, yBase, verde);
-
-        // Puntos superiores.
-        dibujarPunto(g2, xTopeExtDer, yTope, azul);
-        dibujarPunto(g2, xTopeIntDer, yTope, verde);
-
-        // Altura a la derecha del embudo.
-        String textoAltura =
-                "Altura = " + formato.format(altura) + " cm";
-
-        g2.setFont(new Font("Arial", Font.BOLD, 13));
-
-        int xAltura = xTopeExtDer + 12;
-        int yAltura = (yBase + yTope) / 2;
-        int anchoTexto = g2.getFontMetrics().stringWidth(textoAltura);
-
-        // Fondo blanco para que no se cruce visualmente con la cuadrícula.
-        g2.setColor(Color.WHITE);
-        g2.fillRoundRect(
-                xAltura - 5,
-                yAltura - 17,
-                anchoTexto + 10,
-                25,
-                8,
-                8
-        );
-
-        g2.setColor(Color.BLACK);
-        g2.drawString(textoAltura, xAltura, yAltura);
-
-        // Valores inferiores, debajo de los números del eje horizontal.
-        int etiquetaX = centroX + 15;
-
-        g2.setFont(new Font("Arial", Font.BOLD, 13));
-
-        g2.setColor(azul);
-        g2.drawString(
-                "R(0) = " + formato.format(radioInf) + " cm",
-                etiquetaX,
-                yBase + 38
-        );
-
-        g2.setColor(verde);
-        g2.drawString(
-                "r(0) = " + formato.format(radioInf - espesor) + " cm",
-                etiquetaX,
-                yBase + 57
-        );
-
-        // Valores superiores.
-        g2.setFont(new Font("Arial", Font.BOLD, 12));
-
-        g2.setColor(azul);
-        g2.drawString(
-                "R(h) = " + formato.format(radioSup) + " cm",
-                xTopeExtDer + 8,
-                yTope - 12
-        );
-
-        g2.setColor(verde);
-        g2.drawString(
-                "r(h) = " + formato.format(radioSup - espesor) + " cm",
-                xTopeIntDer + 8,
-                yTope + 18
-        );
-
-        dibujarDatos(g2, ancho);
-        dibujarLeyenda(g2, ancho, alto);
-    }
-
-    private void dibujarCuadricula(Graphics2D g2, int centroX,
-                                   int yBase, double escala,
-                                   int ancho, int alto) {
-
-        g2.setFont(new Font("Arial", Font.PLAIN, 11));
-
-        // Líneas verticales y valores del eje horizontal.
-        for (int i = -5; i <= 5; i++) {
-            int x = (int) Math.round(centroX + i * escala);
-
-            if (x < 10 || x > ancho - 10) {
-                continue;
-            }
-
-            g2.setColor(gris);
-            g2.setStroke(new BasicStroke(1f));
-            g2.drawLine(x, 20, x, alto - 20);
-
-            g2.setColor(Color.DARK_GRAY);
-            String numero = String.valueOf(i);
-            int anchoNumero = g2.getFontMetrics().stringWidth(numero);
-
-            g2.drawString(numero, x - anchoNumero / 2, yBase + 16);
+            g2.drawLine(x, yInicio, x, yFin);
+            g2.drawLine(xInicio, y, xFin, y);
         }
 
-        // Líneas horizontales y valores del eje vertical.
-        int maxAltura = (int) Math.floor(altura);
-
-        for (int i = 0; i <= maxAltura; i += 2) {
-            int y = (int) Math.round(yBase - i * escala);
-
-            if (y < 20 || y > alto - 20) {
-                continue;
-            }
-
-            g2.setColor(gris);
-            g2.setStroke(new BasicStroke(1f));
-            g2.drawLine(15, y, ancho - 15, y);
-
-            g2.setColor(Color.DARK_GRAY);
-            String numero = String.valueOf(i);
-
-            g2.drawString(numero, centroX + 6, y - 5);
-        }
-
-        // Eje horizontal principal.
+        // Ejes
         g2.setColor(Color.DARK_GRAY);
         g2.setStroke(new BasicStroke(1.5f));
-        g2.drawLine(15, yBase, ancho - 15, yBase);
-    }
+        g2.drawLine(xInicio, (int) centroY, xFin, (int) centroY);
+        g2.drawLine(xInicio, yInicio, xInicio, yFin);
 
-    private void dibujarPunto(Graphics2D g2, int x, int y,
-                              Color color) {
-        g2.setColor(color);
-        g2.fillOval(x - 4, y - 4, 8, 8);
-    }
+        // Coordenadas del exterior
+        double x0 = inicioX;
+        double x1 = inicioX + altura * escala;
 
-    private void dibujarDatos(Graphics2D g2, int ancho) {
-        int x = ancho - 225;
-        int y = 30;
+        double yBaseArriba = centroY - radioBase * escala;
+        double yBaseAbajo = centroY + radioBase * escala;
+
+        double ySuperiorArriba = centroY - radioSuperior * escala;
+        double ySuperiorAbajo = centroY + radioSuperior * escala;
+
+        // Grosor de la pared
+        double radioBaseInterior = Math.max(0, radioBase - grosor);
+        double radioSuperiorInterior = Math.max(0, radioSuperior - grosor);
+
+        double yBaseInteriorArriba =
+                centroY - radioBaseInterior * escala;
+        double yBaseInteriorAbajo =
+                centroY + radioBaseInterior * escala;
+
+        double ySuperiorInteriorArriba =
+                centroY - radioSuperiorInterior * escala;
+        double ySuperiorInteriorAbajo =
+                centroY + radioSuperiorInterior * escala;
+
+        // Cuerpo exterior
+        Path2D exterior = new Path2D.Double();
+        exterior.moveTo(x0, yBaseArriba);
+        exterior.lineTo(x1, ySuperiorArriba);
+        exterior.lineTo(x1, ySuperiorAbajo);
+        exterior.lineTo(x0, yBaseAbajo);
+        exterior.closePath();
+
+        g2.setColor(new Color(100, 160, 230));
+        g2.fill(exterior);
+
+        // Interior del embudo
+        Path2D interior = new Path2D.Double();
+        interior.moveTo(x0, yBaseInteriorArriba);
+        interior.lineTo(x1, ySuperiorInteriorArriba);
+        interior.lineTo(x1, ySuperiorInteriorAbajo);
+        interior.lineTo(x0, yBaseInteriorAbajo);
+        interior.closePath();
 
         g2.setColor(Color.WHITE);
-        g2.fillRoundRect(x, y, 205, 110, 12, 12);
+        g2.fill(interior);
 
-        g2.setColor(Color.GRAY);
-        g2.drawRoundRect(x, y, 205, 110, 12, 12);
+        // Bordes exteriores
+        g2.setColor(new Color(30, 80, 160));
+        g2.setStroke(new BasicStroke(2.0f));
+        g2.draw(new Line2D.Double(x0, yBaseArriba, x1, ySuperiorArriba));
+        g2.draw(new Line2D.Double(x0, yBaseAbajo, x1, ySuperiorAbajo));
+        g2.draw(new Line2D.Double(x1, ySuperiorArriba,
+                x1, ySuperiorAbajo));
 
+        // Bordes interiores
+        g2.setColor(new Color(30, 140, 80));
+        g2.setStroke(new BasicStroke(1.8f));
+        g2.draw(new Line2D.Double(
+                x0, yBaseInteriorArriba,
+                x1, ySuperiorInteriorArriba
+        ));
+        g2.draw(new Line2D.Double(
+                x0, yBaseInteriorAbajo,
+                x1, ySuperiorInteriorAbajo
+        ));
+
+        // Marcas de altura en el eje X
+        g2.setColor(Color.BLACK);
+        g2.setFont(new Font("Arial", Font.PLAIN, 11));
+
+        for (int i = 0; i <= 5; i++) {
+            double valor = altura * i / 5.0;
+            int x = (int) (inicioX + valor * escala);
+
+            g2.drawLine(x, (int) centroY - 4,
+                    x, (int) centroY + 4);
+
+            String texto = String.format("%.1f", valor);
+            g2.drawString(texto, x - 10, (int) centroY + 20);
+        }
+
+        // Etiquetas de radios a los extremos, sin amontonarlas
+        g2.setFont(new Font("Arial", Font.BOLD, 11));
+        g2.setColor(new Color(30, 80, 160));
+
+        g2.drawString(
+                String.format("r = %.2f", radioBase),
+                (int) x0 - 5,
+                (int) yBaseArriba - 10
+        );
+
+        g2.drawString(
+                String.format("R = %.2f", radioSuperior),
+                (int) x1 - 65,
+                (int) ySuperiorArriba - 10
+        );
+
+        // Nombre del eje X
         g2.setFont(new Font("Arial", Font.BOLD, 13));
         g2.setColor(Color.BLACK);
-        g2.drawString("Datos del embudo", x + 12, y + 21);
-
-        g2.setFont(new Font("Arial", Font.PLAIN, 12));
-
         g2.drawString(
-                "Altura: " + formato.format(altura) + " cm",
-                x + 12, y + 43
+                "Altura (x)",
+                (xInicio + xFin) / 2 - 30,
+                yFin + 35
         );
 
+        // Nombre del eje Y
+        g2.rotate(-Math.PI / 2);
         g2.drawString(
-                "Radio inferior: " + formato.format(radioInf) + " cm",
-                x + 12, y + 61
+                "Radio (y)",
+                -(yInicio + yFin) / 2 - 30,
+                xInicio - 55
         );
+        g2.rotate(Math.PI / 2);
 
-        g2.drawString(
-                "Radio superior: " + formato.format(radioSup) + " cm",
-                x + 12, y + 79
-        );
+        // Leyenda inferior
+        int leyendaY = alto - 25;
 
-        g2.drawString(
-                "Grosor: " + formato.format(espesor) + " cm",
-                x + 12, y + 97
-        );
-    }
-
-    private void dibujarLeyenda(Graphics2D g2, int ancho, int alto) {
-        int y = alto - 25;
-        int x = 25;
-
-        g2.setFont(new Font("Arial", Font.PLAIN, 12));
-
-        g2.setColor(azul);
-        g2.setStroke(new BasicStroke(3f));
-        g2.drawLine(x, y, x + 25, y);
-        g2.drawString("Radio exterior", x + 32, y + 5);
-
-        x += 150;
-
-        g2.setColor(verde);
-        g2.drawLine(x, y, x + 25, y);
-        g2.drawString("Radio interior", x + 32, y + 5);
-
-        x += 145;
-
-        g2.setColor(acero);
-        g2.fillRect(x, y - 7, 22, 14);
-
+        g2.setColor(new Color(100, 160, 230));
+        g2.fillRect(xInicio, leyendaY - 10, 15, 12);
         g2.setColor(Color.BLACK);
-        g2.drawString("Acero", x + 30, y + 5);
+        g2.drawString("Material", xInicio + 22, leyendaY);
+
+        g2.setColor(Color.WHITE);
+        g2.fillRect(xInicio + 120, leyendaY - 10, 15, 12);
+        g2.setColor(Color.BLACK);
+        g2.drawRect(xInicio + 120, leyendaY - 10, 15, 12);
+        g2.drawString("Interior", xInicio + 142, leyendaY);
+
+        g2.dispose();
     }
 }
